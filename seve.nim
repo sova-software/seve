@@ -1,13 +1,11 @@
-import os, strutils, sequtils
-import illwill
-
 const chars: string = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 const numbers: string = "1234567890"
+const seve_dir: string = ".seve.d"
+
 var buffer:  string = ""
 var file_name: string = ""
-var line_numbers_show: bool = true
 
-const commands: seq[string] = @["draw-cow", "goto-line", "help", "open", "quit", "save", "toggle-line-num"]
+const commands: seq[string] = @["draw-cow", "goto-line", "help", "open", "quit", "reload-conf", "save", "toggle-line-num"]
 var debug_msg: string = ""
 
 proc get_command(p: string, w: int, h: int): string
@@ -135,12 +133,12 @@ proc render_text(text: string, cx: int, cy: int): void =
     # display line numbers
     if line_numbers_show:
       if cy == y + ln_offset:
-        tb.write(0, y, style_italic, bg_black, fg_white, repeat(" ", xshift - 1 - len($(y + 1 + ln_offset))) & $(y + 1 + ln_offset) & " ")
+        tb.write(0, y, style_italic, line_num_bg_col, line_num_fg_col, repeat(" ", xshift - 1 - len($(y + 1 + ln_offset))) & $(y + 1 + ln_offset) & " ")
       else:
-        tb.write(0, y, style_dim, bg_black, fg_white, repeat(" ", xshift - 1 - len($(y + 1 + ln_offset))) & $(y + 1 + ln_offset) & " ")
+        tb.write(0, y, style_dim, line_num_bg_col, line_num_fg_col, repeat(" ", xshift - 1 - len($(y + 1 + ln_offset))) & $(y + 1 + ln_offset) & " ")
     for ch in ln:
-      if y == sc and x == cx:
-        tb.write(x + xshift, y, reset_style, bg_white, fg_black, $ch)
+      if y == sc and x == cx: # if this is where cursor is
+        tb.write(x + xshift, y, reset_style, cursor_bg_col, fg_black, $ch)
       else:
         tb.write(x + xshift, y, reset_style, bg_black, fg_white, $ch)
       x += 1
@@ -175,6 +173,7 @@ proc file_open(fstr: string): void =
   let f: File = open(fstr, fm_read) 
   file_name = fstr
   buffer = read_all(f)
+  close(f)
 
 proc file_write(fstr: string): void =
   write_file(fstr, buffer) 
@@ -191,7 +190,7 @@ proc exec_command(c: string): void =
       file_name = get_command("Save as: ", width, height)
     file_write(file_name)
   elif c == "help":
-    file_open("/home/robert/Programming/seve/seve.d/doc/help.txt")
+    file_open(seve_dir & "/doc/help.txt")
   elif c == "open":
     file_open(get_command("File: ", width, height))
   elif c == "quit":
@@ -200,6 +199,8 @@ proc exec_command(c: string): void =
     line_goto(parse_int(get_command("Line: ", width, height)))
   elif c == "toggle-line-num":
     line_numbers_toggle()
+  elif c == "reload-conf":
+    load_conf_vars()
   else:
     panel_msg(0, "command not found " & c, width, height)
   tb.display()
@@ -342,16 +343,15 @@ proc ins(): void =
 
 
 
-while true:
+proc main_loop(): void =
+  while true:
+    ins()
+    render_text(buffer, posx, posy)
 
-  ins()
-  render_text(buffer, posx, posy)
-
-  tb.display()
-  width  = terminal_width()
-  height = terminal_height()
-
-  sleep(40)
+    tb.display()
+    width  = terminal_width()
+    height = terminal_height()
+    sleep(40)
 
 # Beware of off-by-one-errors! They're everywhere.
 # TODO: fix the background of a line number if line is greater than 99
