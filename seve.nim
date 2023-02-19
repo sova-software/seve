@@ -1,12 +1,12 @@
 const chars: string = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 const numbers: string = "1234567890"
-const seve_dir: string = ".seve.d"
+const seve_dir: string = "/home/robert/.seve.d"
 
 var buffer:  string = ""
 var file_name: string = ""
 
 const commands: seq[string] = @["draw-cow", "goto-line", "help", "open", "quit", "reload-conf", "save", "toggle-line-num"]
-var debug_msg: string = ""
+var ext_commands: seq[string] = @[]
 
 proc get_command(p: string, w: int, h: int): string
 
@@ -140,7 +140,7 @@ proc render_text(text: string, cx: int, cy: int): void =
       if y == sc and x == cx: # if this is where cursor is
         tb.write(x + xshift, y, reset_style, cursor_bg_col, fg_black, $ch)
       else:
-        tb.write(x + xshift, y, reset_style, bg_black, fg_white, $ch)
+        tb.write(x + xshift, y, reset_style, text_bg_col, text_fg_col, $ch)
       x += 1
 
     y += 1
@@ -201,6 +201,8 @@ proc exec_command(c: string): void =
     line_numbers_toggle()
   elif c == "reload-conf":
     load_conf_vars()
+  elif contains(ext_commands, c):
+    exec_script("/home/robert/.seve.d/commands/" & c)
   else:
     panel_msg(0, "command not found " & c, width, height)
   tb.display()
@@ -242,8 +244,8 @@ proc get_command(p: string, w: int, h: int): string =
       var w: int = width
       var i: int = 1
       var o: int = 0
-
-      for s in commands:
+      var cs: seq[string] = commands & ext_commands
+      for s in cs:
         if len(command) > len(s):
           continue
         if s[0..len(command) - 1] == command:
@@ -263,6 +265,11 @@ proc get_command(p: string, w: int, h: int): string =
     width  = terminal_width()
     height = terminal_height()
     sleep(40)
+
+proc get_external_commands(): void =
+  for kind, path in walk_dir("/home/robert/.seve.d/commands/"):
+    if kind == pc_file:
+      ext_commands &= last_path_part(path)
 
 proc ins(): void =
   let key = get_key()
