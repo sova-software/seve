@@ -1,5 +1,3 @@
-import std/times
-
 const chars: string = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 const numbers: string = "1234567890"
 const seve_dir: string = "/home/robert/.seve.d"
@@ -163,7 +161,8 @@ proc curs_left(): void =
     posx -= 1
 
 proc curs_rigth(): void =
-  posx += 1
+  if posx < len(buffer) or posy < line_count_get(buffer):
+    posx += 1
 
 proc curs_up(): void =
   if posy > 0:
@@ -172,6 +171,8 @@ proc curs_up(): void =
       posx = get_eol(buffer, posy)
 proc curs_down(): void =
   if line_count_get(buffer) > posy + 1:
+    if get_eol(buffer, posy) > get_eol(buffer, posy + 1):
+      posx = get_eol(buffer, posy + 1)
     posy += 1
 
 proc file_open(fstr: string): void =
@@ -335,10 +336,20 @@ proc inp(): void =
       if line_numbers_show:
         xshift = len($(line_count_get(buffer))) + 1 # set xshift to length of the longest line number
       wrt = false
-    of "Left": curs_left()
-    of "Right": curs_rigth()
-    of "Up": curs_up()
-    of "Down": curs_down()
+      tb.write(0, 0, reset_style, bg_black, fg_white, "")
+      tb.clear()
+    of "Left":
+      curs_left()
+      wrt = false
+    of "Right":
+      curs_rigth()
+      wrt = false
+    of "Up":
+      curs_up()
+      wrt = false
+    of "Down":
+      curs_down()
+      wrt = false
     else:
       fstr = keystr
     
